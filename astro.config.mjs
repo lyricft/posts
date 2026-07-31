@@ -5,6 +5,7 @@ import md3Theme from 'starlight-theme-md3';
 
 // https://astro.build/config
 export default defineConfig({
+	site: 'https://posts.yg2402.cn',
 	integrations: [
 		starlight({
 			title: 'My Docs',
