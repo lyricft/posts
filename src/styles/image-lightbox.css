@@ -1,0 +1,225 @@
+/* ============ 文章内图片 ============ */
+.lightbox-trigger {
+  cursor: zoom-in;
+  transition: opacity 0.15s ease;
+}
+
+.lightbox-trigger:hover {
+  opacity: 0.9;
+}
+
+/* ============ 灯箱遮罩 ============ */
+.image-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(7, 11, 19, 0.92);
+  backdrop-filter: blur(18px) saturate(1.1);
+  -webkit-backdrop-filter: blur(18px) saturate(1.1);
+  animation: image-viewer-in 0.18s ease-out;
+}
+
+.image-viewer--closing {
+  animation: image-viewer-out 0.18s ease-in forwards;
+}
+
+@keyframes image-viewer-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes image-viewer-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* ============ 加载动画 ============ */
+.image-viewer__loader {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #fff;
+  animation: image-viewer-spin 0.8s linear infinite;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.image-viewer.is-loaded .image-viewer__loader {
+  opacity: 0;
+  visibility: hidden;
+}
+
+@keyframes image-viewer-spin {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* ============ 错误提示 ============ */
+.image-viewer__error {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  background: rgba(229, 231, 235, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  padding: 12px 22px;
+  border-radius: 14px;
+  z-index: 1;
+  display: none;
+  pointer-events: none;
+}
+
+.image-viewer.is-error .image-viewer__error {
+  display: block;
+}
+
+/* ============ 画布 ============ */
+.image-viewer__canvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  cursor: grab;
+}
+
+.image-viewer__canvas.is-dragging {
+  cursor: grabbing;
+}
+
+/* ============ 图片 ============ */
+.image-viewer .image-viewer__img {
+  flex: 0 0 auto;
+  width: auto !important;
+  height: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06),
+              0 24px 80px rgba(0, 0, 0, 0.45);
+  transform-origin: 50% 50%;
+  will-change: transform;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.image-viewer.is-loaded:not(.is-error) .image-viewer__img {
+  animation: image-viewer-img-in 0.2s ease;
+}
+
+@keyframes image-viewer-img-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ============ 工具栏 ============ */
+.image-viewer__toolbar {
+  position: absolute;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  transform: translateX(-50%) translateY(8px);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(20, 26, 38, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.image-viewer.is-loaded .image-viewer__toolbar {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.image-viewer__btn {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+  touch-action: manipulation;
+}
+
+.image-viewer__btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.image-viewer__btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  transform: scale(1.04);
+}
+
+.image-viewer__btn:active {
+  transform: scale(0.94);
+}
+
+.image-viewer__btn--close:hover {
+  background: rgba(239, 68, 68, 0.22);
+  color: #fda4af;
+}
+
+.image-viewer__zoom {
+  min-width: 52px;
+  text-align: center;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.7);
+  user-select: none;
+  letter-spacing: 0.02em;
+}
+
+.image-viewer__divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 6px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+@media (max-width: 640px) {
+  .image-viewer__btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .image-viewer__toolbar {
+    padding: 6px 8px;
+  }
+}
