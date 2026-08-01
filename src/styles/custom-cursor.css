@@ -1,0 +1,125 @@
+/* ============================================================
+   自定义鼠标光标 CSS（自动适配 Light / Dark）
+   ============================================================ */
+
+/* ---------- 主题变量 ----------
+   Light 模式：黑灰色
+   Dark 模式：白灰色
+   如果 Starlight 用的是 class 而不是 data-theme，也已兼容。
+*/
+:root,
+:root[data-theme="light"],
+:root.theme-light {
+  /* 中心圆点渐变 */
+  --cursor-dot-1: #1f2937;
+  --cursor-dot-2: #374151;
+
+  /* 圆点外发光 */
+  --cursor-dot-glow: rgba(31, 41, 55, 0.35);
+
+  /* 光环默认颜色 */
+  --cursor-ring: rgba(31, 41, 55, 0.45);
+
+  /* 悬停可交互元素时的颜色 */
+  --cursor-ring-hover: rgba(17, 24, 39, 0.8);
+  --cursor-ring-hover-bg: rgba(31, 41, 55, 0.08);
+
+  /* 按下鼠标瞬间的颜色 */
+  --cursor-active: rgba(220, 38, 38, 0.9);
+  --cursor-active-bg: rgba(220, 38, 38, 0.12);
+}
+
+:root[data-theme="dark"],
+:root.theme-dark {
+  /* 中心圆点渐变 */
+  --cursor-dot-1: #f9fafb;
+  --cursor-dot-2: #e5e7eb;
+
+  /* 圆点外发光 */
+  --cursor-dot-glow: rgba(255, 255, 255, 0.45);
+
+  /* 光环默认颜色 */
+  --cursor-ring: rgba(255, 255, 255, 0.45);
+
+  /* 悬停可交互元素时的颜色 */
+  --cursor-ring-hover: rgba(229, 231, 235, 0.9);
+  --cursor-ring-hover-bg: rgba(255, 255, 255, 0.1);
+
+  /* 按下鼠标瞬间的颜色 */
+  --cursor-active: rgba(251, 191, 36, 0.9);
+  --cursor-active-bg: rgba(251, 191, 36, 0.15);
+}
+
+/* ---------- 隐藏系统光标 ---------- */
+html.cursor-ready,
+html.cursor-ready * {
+  cursor: none !important;
+}
+
+/* ---------- 光标元素 ---------- */
+.cursor-dot,
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2147483647;
+  pointer-events: none;
+  border-radius: 50%;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  will-change: transform;
+}
+
+html.cursor-ready .cursor-dot,
+html.cursor-ready .cursor-ring {
+  opacity: 1;
+}
+
+/* 中心圆点 */
+.cursor-dot {
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(135deg, var(--cursor-dot-1), var(--cursor-dot-2));
+  box-shadow: 0 0 14px var(--cursor-dot-glow);
+}
+
+/* 跟随光环 */
+.cursor-ring {
+  width: 38px;
+  height: 38px;
+  border: 2px solid var(--cursor-ring);
+  transition: background 0.2s ease, border-color 0.2s ease,
+              transform 0.15s ease, opacity 0.2s ease;
+}
+
+/* ---------- 交互反馈 ---------- */
+
+/* 悬停可交互元素 */
+.cursor-dot.is-hover {
+  transform: translate(-50%, -50%) scale(0.6);
+}
+
+.cursor-ring.is-hover {
+  border-color: var(--cursor-ring-hover);
+  background: var(--cursor-ring-hover-bg);
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+/* 按下鼠标 */
+.cursor-dot.is-down {
+  transform: translate(-50%, -50%) scale(1.6);
+}
+
+.cursor-ring.is-down {
+  border-color: var(--cursor-active);
+  background: var(--cursor-active-bg);
+  transform: translate(-50%, -50%) scale(0.7);
+}
+
+/* ---------- 移动端屏蔽 ---------- */
+@media (pointer: coarse) {
+  .cursor-dot,
+  .cursor-ring {
+    display: none !important;
+  }
+}

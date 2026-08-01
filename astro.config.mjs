@@ -9,7 +9,8 @@ export default defineConfig({
             title: 'My Docs',
             customCss: [
                 './src/styles/global.css',
-                './src/styles/image-lightbox.css'
+                './src/styles/image-lightbox.css',
+                './src/styles/custom-cursor.css',
             ],
             head: [
                 {
@@ -19,6 +20,12 @@ export default defineConfig({
                         type: 'module',
                     },
                 },
+                {
+                    tag: 'script',
+                    attrs: {
+                        src: '/scripts/custom-cursor.js'
+                    }
+                }
             ],
             plugins: [
                 md3Theme()
