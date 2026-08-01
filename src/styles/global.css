@@ -1,0 +1,29 @@
+/* 1. 优先加载字体文件 */
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/noto-sans-sc/400.css";
+@import "@fontsource/noto-sans-sc/600.css";
+@import "@fontsource/noto-sans-sc/700.css";
+@import "@fontsource/fira-code/400.css";
+
+/* 2. 强制层级高于starlight默认样式 */
+@layer base, starlight;
+
+/* 3. 覆盖Starlight内置字体变量（核心） */
+:root {
+  --sl-font-sans: "Inter", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+  --sl-font-mono: "Fira Code", Consolas, Monaco, monospace;
+}
+
+/* 4. 代码块开启连字 */
+pre, code, kbd, .astro-code {
+  font-family: var(--sl-font-mono);
+  font-feature-settings: "calt" 1;
+}
+
+/* 兜底全局强制生效 */
+body, html {
+  font-family: var(--sl-font-sans) !important;
+}
+
