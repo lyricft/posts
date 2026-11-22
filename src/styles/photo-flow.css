@@ -1,0 +1,129 @@
+/* ============ 图片流：三列瀑布 ============ */
+.photo-flow {
+  columns: 3;
+  column-gap: 12px;
+  margin: 1.5rem 0;
+
+  /* 骨架占位与微光，深浅模式各一套 */
+  --pf-skeleton-bg: rgba(148, 163, 184, 0.14);
+  --pf-skeleton-shine: rgba(255, 255, 255, 0.22);
+  --pf-radius: 10px;
+}
+
+:root[data-theme='light'] .photo-flow {
+  --pf-skeleton-bg: rgba(148, 163, 184, 0.3);
+  --pf-skeleton-shine: rgba(255, 255, 255, 0.9);
+}
+
+/* Markdown 里每张图都是独立段落，作为列内不可分割的块 */
+.photo-flow > p {
+  position: relative;
+  margin: 0 0 12px;
+  /* 无条件撑出占位高度：图片未加载、或脚本失效时都不会塌成空白 */
+  min-height: 200px;
+  border-radius: var(--pf-radius);
+  background-color: var(--pf-skeleton-bg);
+  overflow: hidden;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  transition: background-color 0.6s ease;
+}
+
+/*
+ * 微光层默认透明，只有脚本打上 .pf-ready 后才出现。
+ * 这样即使 JS 失效，图片也只是没有动画，不会被永久遮住。
+ */
+.photo-flow > p::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background-image: linear-gradient(
+    100deg,
+    transparent 25%,
+    var(--pf-skeleton-shine) 50%,
+    transparent 75%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+
+@keyframes photo-flow-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+/* 加载中：扫光 */
+.photo-flow.pf-ready > p:not(.is-loaded)::before {
+  opacity: 1;
+  animation: photo-flow-shimmer 1.5s ease-in-out infinite;
+}
+
+/* 图片本体：淡入 + 轻微放大回弹 */
+.photo-flow img {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0;
+  border-radius: var(--pf-radius);
+  transition: opacity 0.65s cubic-bezier(0.33, 1, 0.68, 1),
+    transform 0.7s cubic-bezier(0.22, 0.61, 0.36, 1), filter 0.2s ease;
+}
+
+.photo-flow.pf-ready > p:not(.is-loaded):not(.is-error) > img {
+  opacity: 0;
+  transform: scale(1.045);
+}
+
+/* 载入完成：撤掉占位高度，底色与微光一起淡出 */
+.photo-flow > p.is-loaded {
+  min-height: 0;
+  background-color: transparent;
+}
+
+.photo-flow.pf-ready > p.is-loaded::before {
+  opacity: 0;
+  animation: none;
+}
+
+/* 加载失败：停掉扫光 */
+.photo-flow.pf-ready > p.is-error::before {
+  opacity: 0;
+  animation: none;
+}
+
+.photo-flow img:hover {
+  filter: brightness(1.08);
+}
+
+@media (max-width: 900px) {
+  .photo-flow {
+    columns: 2;
+    column-gap: 10px;
+  }
+
+  .photo-flow > p {
+    margin-bottom: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .photo-flow > p::before {
+    animation: none;
+  }
+
+  .photo-flow img {
+    transition: opacity 0.25s ease;
+  }
+
+  .photo-flow.pf-ready > p:not(.is-loaded):not(.is-error) > img {
+    transform: none;
+  }
+}

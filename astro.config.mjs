@@ -1,9 +1,13 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import md3Theme from 'starlight-theme-md3';
+import rehypeLazyImages from './rehype-lazy-images.mjs';
 
 export default defineConfig({
     site: 'https://posts.yg2402.cn',
+    markdown: {
+        rehypePlugins: [rehypeLazyImages],
+    },
     integrations: [
         starlight({
             title: 'My Docs',
@@ -11,6 +15,8 @@ export default defineConfig({
                 './src/styles/global.css',
                 './src/styles/image-lightbox.css',
                 './src/styles/custom-cursor.css',
+                './src/styles/photo-flow.css',
+                './src/styles/glass.css',
             ],
             head: [
                 {
@@ -25,6 +31,13 @@ export default defineConfig({
                     attrs: {
                         src: '/scripts/custom-cursor.js'
                     }
+                },
+                {
+                    tag: 'script',
+                    attrs: {
+                        src: '/scripts/photo-flow.js',
+                        type: 'module',
+                    },
                 }
             ],
             plugins: [
@@ -42,6 +55,12 @@ export default defineConfig({
                     label: '合照',
                     items: [
                         { label: '合照合集', slug: '合照/合照合集' }
+                    ]
+                },
+                {
+                    label: 'Gallery',
+                    items: [
+                        { label: '酒埕岩', slug: 'gallery/jiuchengyan' }
                     ]
                 }
             ]

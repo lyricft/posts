@@ -32,8 +32,30 @@
   let imageEl = null;
   let zoomLabel = null;
   let loadTimer = null;
+  let downloadBtn = null;
+  let toastEl = null;
+  let sourceUrl = '';
+  let toastTimer = null;
+  let prevBtn = null;
+  let nextBtn = null;
+  let counterEl = null;
+  let gallery = [];
+  let currentIndex = -1;
 
   const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+
+  // 图片扩展名 <-> MIME 映射，用于纠正 CDN 转换后的真实格式
+  const IMAGE_EXT_RE = /\.(jpe?g|png|gif|webp|avif|svg|bmp|heic|tiff?)$/i;
+  const EXT_BY_TYPE = {
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/webp': '.webp',
+    'image/gif': '.gif',
+    'image/avif': '.avif',
+    'image/svg+xml': '.svg',
+    'image/bmp': '.bmp',
+    'image/tiff': '.tiff',
+  };
 
   // 从多种来源解析图片真实地址，兼容懒加载图片
   function resolveSrc(img) {
@@ -49,6 +71,152 @@
     return '';
   }
 
+  /**
+   * 从图片地址推断下载用的文件名。
+   * 兼容图床在末尾追加 `/webp`、`?imageView2/...` 这类转换后缀的情况。
+   */
+  function guessFileName(url, alt) {
+    let name = '';
+
+    try {
+      const parts = new URL(url, location.href).pathname.split('/').filter(Boolean);
+
+      // 从后往前找第一个像图片文件名的片段
+      for (let i = parts.length - 1; i >= 0; i--) {
+        let seg = parts[i];
+        try {
+          seg = decodeURIComponent(seg);
+        } catch (_) {}
+
+        if (IMAGE_EXT_RE.test(seg)) {
+          name = seg;
+          break;
+        }
+      }
+
+      // 退而求其次：取最后一段（如 /photo/12345 这类无扩展名的地址）
+      if (!name && parts.length) {
+        const last = parts[parts.length - 1];
+        try {
+          name = decodeURIComponent(last);
+        } catch (_) {
+          name = last;
+        }
+      }
+    } catch (_) {}
+
+    if (!name && alt && alt.trim()) name = alt.trim();
+    if (!name) name = 'image';
+
+    // 去掉 Windows / macOS / Linux 下的非法文件名字符
+    name = name.replace(/[\\/:*?"<>|\u0000-\u001f\u007f]/g, '_').trim();
+    if (!name) name = 'image';
+
+    // 名字太长时保留扩展名截断
+    if (name.length > 120) {
+      const dot = name.lastIndexOf('.');
+      name =
+        dot > 0 && name.length - dot <= 10
+          ? name.slice(0, 120 - (name.length - dot)) + name.slice(dot)
+          : name.slice(0, 120);
+    }
+
+    if (!IMAGE_EXT_RE.test(name)) name += '.jpg';
+
+    return name;
+  }
+
+  function showToast(message) {
+    if (!toastEl) return;
+    toastEl.textContent = message;
+    toastEl.classList.add('is-visible');
+
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => {
+      if (toastEl) toastEl.classList.remove('is-visible');
+      toastTimer = null;
+    }, 2600);
+  }
+
+  function setDownloadBusy(busy) {
+    if (!downloadBtn) return;
+    downloadBtn.classList.toggle('is-busy', busy);
+    downloadBtn.disabled = busy;
+    downloadBtn.setAttribute('aria-busy', busy ? 'true' : 'false');
+  }
+
+  function saveViaBlob(blob, fileName) {
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objectUrl;
+    a.download = fileName;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+  }
+
+  function openInNewTab(url, fileName) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.style.display = 'none';
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  /** 下载当前图片：优先取回字节直接保存，跨域受限时退回新标签页打开 */
+  async function downloadImage() {
+    if (!sourceUrl || !downloadBtn) return;
+
+    const baseName = guessFileName(sourceUrl, imageEl?.alt || '');
+    setDownloadBusy(true);
+    showToast('正在准备下载…');
+
+    let timer = null;
+
+    try {
+      const controller = new AbortController();
+      timer = window.setTimeout(() => controller.abort(), 20000);
+
+      const res = await fetch(sourceUrl, {
+        mode: 'cors',
+        credentials: 'omit',
+        signal: controller.signal,
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const blob = await res.blob();
+
+      // CDN 常把原图转成 webp 但保留 .JPG 文件名，按真实 MIME 修正扩展名
+      const realExt = EXT_BY_TYPE[blob.type];
+      let fileName = baseName;
+
+      if (realExt && !fileName.toLowerCase().endsWith(realExt)) {
+        fileName = fileName.replace(/\.[a-z0-9]+$/i, '') + realExt;
+      }
+
+      saveViaBlob(blob, fileName);
+      showToast('已开始下载');
+    } catch (_) {
+      // 跨域策略（无 Access-Control-Allow-Origin）会走到这里
+      openInNewTab(sourceUrl, baseName);
+      showToast('已在新标签页打开，右键或长按图片保存');
+    } finally {
+      if (timer) clearTimeout(timer);
+      setDownloadBusy(false);
+    }
+  }
+
   function init() {
     document.querySelectorAll(SELECTOR).forEach((img) => {
       if (img.dataset.lightboxAttached) return;
@@ -62,6 +230,103 @@
         open(img);
       });
     });
+  }
+
+  /** 收集当前页面所有可点击放大的图片，按 DOM 顺序作为浏览序列 */
+  function collectGallery() {
+    return Array.from(document.querySelectorAll('.lightbox-trigger')).filter(
+      (img) => !img.closest('.image-viewer')
+    );
+  }
+
+  function setGallery(source) {
+    gallery = collectGallery();
+    currentIndex = gallery.indexOf(source);
+
+    // 兜底：图片不在序列里时，把它当作只有一张的图库
+    if (currentIndex === -1) {
+      gallery = [source];
+      currentIndex = 0;
+    }
+  }
+
+  function updateNav() {
+    const multiple = gallery.length > 1;
+
+    if (prevBtn) {
+      const off = !multiple || currentIndex <= 0;
+      prevBtn.disabled = off;
+      prevBtn.setAttribute('aria-disabled', off ? 'true' : 'false');
+    }
+
+    if (nextBtn) {
+      const off = !multiple || currentIndex >= gallery.length - 1;
+      nextBtn.disabled = off;
+      nextBtn.setAttribute('aria-disabled', off ? 'true' : 'false');
+    }
+
+    if (counterEl) {
+      counterEl.textContent = multiple ? `${currentIndex + 1} / ${gallery.length}` : '';
+      counterEl.hidden = !multiple;
+    }
+  }
+
+  function navigate(delta) {
+    if (!root || gallery.length < 2) return;
+
+    const target = currentIndex + delta;
+    if (target < 0 || target >= gallery.length) return;
+
+    currentIndex = target;
+    loadSource(gallery[currentIndex]);
+  }
+
+  /** 把某张图片装进当前灯箱；首次打开和切换图片共用这段逻辑 */
+  function loadSource(source) {
+    if (!root || !imageEl) return;
+
+    if (loadTimer) {
+      clearTimeout(loadTimer);
+      loadTimer = null;
+    }
+
+    root.classList.remove('is-error');
+    root.classList.add('is-swapping');
+    imageEl.style.opacity = '0.25';
+    imageEl.style.maxWidth = '';
+    imageEl.style.maxHeight = '';
+    imageEl.removeAttribute('srcset');
+    imageEl.alt = source.alt || '';
+
+    // 下载始终指向原图，而不是 srcset 命中的小尺寸变体
+    sourceUrl = resolveSrc(source);
+
+    updateNav();
+
+    if (!sourceUrl) {
+      finishLoad(false);
+      return;
+    }
+
+    // 复制响应式图片源（如果有）
+    const srcset = source.getAttribute('srcset');
+    if (srcset) imageEl.setAttribute('srcset', srcset);
+
+    imageEl.src = sourceUrl;
+
+    // 安全后备：如果 load 事件意外丢失，2.5 秒后自动恢复
+    loadTimer = window.setTimeout(() => {
+      if (!root || !root.contains(imageEl)) return;
+
+      const iw = imageEl.naturalWidth;
+      const ih = imageEl.naturalHeight;
+
+      if (imageEl.complete && (iw === 0 || ih === 0)) {
+        finishLoad(false);
+      } else if (iw > 0 && ih > 0) {
+        finishLoad(true);
+      }
+    }, 2500);
   }
 
   function open(source) {
@@ -87,6 +352,18 @@
         <img class="image-viewer__img" alt="${safeAlt}" />
       </div>
 
+      <button class="image-viewer__nav image-viewer__nav--prev" type="button" aria-label="上一张 (←)" title="上一张 (←)">
+        <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
+      </button>
+
+      <button class="image-viewer__nav image-viewer__nav--next" type="button" aria-label="下一张 (→)" title="下一张 (→)">
+        <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+
+      <div class="image-viewer__counter" aria-hidden="true"></div>
+
+      <div class="image-viewer__toast" role="status" aria-live="polite"></div>
+
       <div class="image-viewer__toolbar" role="toolbar" aria-label="图片查看器">
         <button class="image-viewer__btn image-viewer__btn--close" type="button" aria-label="关闭 (Esc)">
           <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -107,6 +384,12 @@
         <button class="image-viewer__btn image-viewer__btn--reset" type="button" aria-label="适应窗口 / 重置">
           <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
         </button>
+
+        <span class="image-viewer__divider"></span>
+
+        <button class="image-viewer__btn image-viewer__btn--download" type="button" aria-label="下载图片" title="下载图片">
+          <svg viewBox="0 0 24 24"><path d="M12 3v11m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        </button>
       </div>
     `;
 
@@ -114,6 +397,10 @@
     canvas = viewer.querySelector('.image-viewer__canvas');
     imageEl = viewer.querySelector('.image-viewer__img');
     zoomLabel = viewer.querySelector('.image-viewer__zoom');
+    toastEl = viewer.querySelector('.image-viewer__toast');
+    prevBtn = viewer.querySelector('.image-viewer__nav--prev');
+    nextBtn = viewer.querySelector('.image-viewer__nav--next');
+    counterEl = viewer.querySelector('.image-viewer__counter');
 
     document.body.appendChild(viewer);
     document.body.style.overflow = 'hidden';
@@ -123,6 +410,7 @@
     const zoomInBtn = viewer.querySelector('.image-viewer__btn--zoom-in');
     const zoomOutBtn = viewer.querySelector('.image-viewer__btn--zoom-out');
     const resetBtn = viewer.querySelector('.image-viewer__btn--reset');
+    downloadBtn = viewer.querySelector('.image-viewer__btn--download');
 
     closeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -144,6 +432,21 @@
       resetView();
     });
 
+    downloadBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      downloadImage();
+    });
+
+    prevBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      navigate(-1);
+    });
+
+    nextBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      navigate(1);
+    });
+
     canvas.addEventListener('pointerdown', onPointerDown);
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('pointerup', onPointerUp);
@@ -154,36 +457,12 @@
     state.viewportW = rect.width || window.innerWidth;
     state.viewportH = rect.height || window.innerHeight;
 
-    // 解析真实图片地址
-    const src = resolveSrc(source);
-
-    if (!src) {
-      finishLoad(false);
-      return;
-    }
-
     imageEl.addEventListener('load', onImageLoad);
     imageEl.addEventListener('error', onImageError);
 
-    // 复制响应式图片源（如果有）
-    const srcset = source.getAttribute('srcset');
-    if (srcset) imageEl.setAttribute('srcset', srcset);
-
-    imageEl.src = src;
-
-    // 安全后备：如果 load 事件意外丢失，2.5 秒后自动恢复
-    loadTimer = window.setTimeout(() => {
-      if (!root || !root.contains(imageEl)) return;
-
-      const iw = imageEl.naturalWidth;
-      const ih = imageEl.naturalHeight;
-
-      if (imageEl.complete && (iw === 0 || ih === 0)) {
-        finishLoad(false);
-      } else if (iw > 0 && ih > 0) {
-        finishLoad(true);
-      }
-    }, 2500);
+    // 建立浏览序列（上一张 / 下一张），再装载当前图片
+    setGallery(source);
+    loadSource(source);
 
     closeBtn.focus();
   }
@@ -196,6 +475,8 @@
       clearTimeout(loadTimer);
       loadTimer = null;
     }
+
+    root.classList.remove('is-swapping');
 
     const rect = canvas?.getBoundingClientRect() || { width: 0, height: 0 };
     state.viewportW = rect.width || window.innerWidth;
@@ -254,6 +535,18 @@
     canvas = null;
     imageEl = null;
     zoomLabel = null;
+    downloadBtn = null;
+    toastEl = null;
+    prevBtn = null;
+    nextBtn = null;
+    counterEl = null;
+    sourceUrl = '';
+    currentIndex = -1;
+
+    if (toastTimer) {
+      clearTimeout(toastTimer);
+      toastTimer = null;
+    }
 
     state.pointers.clear();
 
@@ -487,11 +780,14 @@
         break;
       case 'ArrowLeft':
         e.preventDefault();
-        panBy(60, 0);
+        // Shift + ← 平移图片，单独按 ← 切换上一张
+        if (e.shiftKey) panBy(60, 0);
+        else navigate(-1);
         break;
       case 'ArrowRight':
         e.preventDefault();
-        panBy(-60, 0);
+        if (e.shiftKey) panBy(-60, 0);
+        else navigate(1);
         break;
       case 'ArrowUp':
         e.preventDefault();

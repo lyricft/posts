@@ -1,3 +1,8 @@
+/* ============ 正文图片圆角 ============ */
+.sl-markdown-content img {
+  border-radius: 12px;
+}
+
 /* ============ 文章内图片 ============ */
 .lightbox-trigger {
   cursor: zoom-in;
@@ -213,6 +218,153 @@
   background: rgba(255, 255, 255, 0.14);
 }
 
+/* ============ 上一张 / 下一张 ============ */
+.image-viewer__nav {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  background: rgba(20, 26, 38, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: rgba(255, 255, 255, 0.9);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+  opacity: 0;
+  transform: translateY(-50%) scale(0.96);
+  transition: opacity 0.2s ease, transform 0.15s ease, background 0.15s ease;
+}
+
+.image-viewer__nav--prev {
+  left: max(16px, env(safe-area-inset-left));
+}
+
+.image-viewer__nav--next {
+  right: max(16px, env(safe-area-inset-right));
+}
+
+.image-viewer.is-loaded .image-viewer__nav {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+
+.image-viewer__nav svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.image-viewer__nav:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  transform: translateY(-50%) scale(1.06);
+}
+
+.image-viewer__nav:active {
+  transform: translateY(-50%) scale(0.94);
+}
+
+/* 只有一张图、或已经到头时淡出禁用 */
+.image-viewer.is-loaded .image-viewer__nav:disabled {
+  opacity: 0.18;
+  pointer-events: none;
+  transform: translateY(-50%) scale(1);
+}
+
+/* ============ 图片序号 ============ */
+.image-viewer__counter {
+  position: absolute;
+  top: max(18px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(20, 26, 38, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.image-viewer.is-loaded .image-viewer__counter {
+  opacity: 1;
+}
+
+/* ============ 切换图片时的加载态 ============ */
+.image-viewer.is-swapping .image-viewer__loader {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ============ 下载按钮 ============ */
+.image-viewer__btn--download:hover {
+  background: rgba(56, 189, 248, 0.22);
+  color: #7dd3fc;
+}
+
+.image-viewer__btn.is-busy,
+.image-viewer__btn:disabled {
+  opacity: 0.5;
+  cursor: progress;
+  transform: none;
+}
+
+.image-viewer__btn.is-busy:hover,
+.image-viewer__btn:disabled:hover {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  transform: none;
+}
+
+/* ============ 操作提示 ============ */
+.image-viewer__toast {
+  position: absolute;
+  left: 50%;
+  bottom: calc(max(20px, env(safe-area-inset-bottom)) + 68px);
+  transform: translateX(-50%) translateY(6px);
+  z-index: 3;
+  max-width: calc(100vw - 40px);
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(20, 26, 38, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.image-viewer__toast.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
 @media (max-width: 640px) {
   .image-viewer__btn {
     width: 36px;
@@ -222,4 +374,69 @@
   .image-viewer__toolbar {
     padding: 6px 8px;
   }
+
+  .image-viewer__nav {
+    width: 38px;
+    height: 38px;
+  }
+
+  .image-viewer__nav svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .image-viewer__nav--prev {
+    left: 8px;
+  }
+
+  .image-viewer__nav--next {
+    right: 8px;
+  }
 }
+
+/* ============ 浅色模式：控件转为浅色玻璃 ============ */
+:root[data-theme='light'] .image-viewer__toolbar,
+:root[data-theme='light'] .image-viewer__nav,
+:root[data-theme='light'] .image-viewer__counter,
+:root[data-theme='light'] .image-viewer__toast,
+:root[data-theme='light'] .image-viewer__error {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(15, 23, 42, 0.1);
+  color: #1f2937;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
+}
+
+:root[data-theme='light'] .image-viewer__btn,
+:root[data-theme='light'] .image-viewer__nav {
+  color: rgba(31, 41, 55, 0.78);
+}
+
+:root[data-theme='light'] .image-viewer__btn:hover,
+:root[data-theme='light'] .image-viewer__nav:hover {
+  background: rgba(15, 23, 42, 0.08);
+  color: #111827;
+}
+
+:root[data-theme='light'] .image-viewer__btn--close:hover {
+  background: rgba(239, 68, 68, 0.14);
+  color: #b91c1c;
+}
+
+:root[data-theme='light'] .image-viewer__btn--download:hover {
+  background: rgba(14, 165, 233, 0.16);
+  color: #0369a1;
+}
+
+:root[data-theme='light'] .image-viewer__zoom {
+  color: rgba(31, 41, 55, 0.68);
+}
+
+:root[data-theme='light'] .image-viewer__divider {
+  background: rgba(15, 23, 42, 0.14);
+}
+
+/* 浅色下禁用态改用低透明度黑色，避免白色控件上几乎看不见 */
+:root[data-theme='light'] .image-viewer.is-loaded .image-viewer__nav:disabled {
+  opacity: 0.28;
+}
+
