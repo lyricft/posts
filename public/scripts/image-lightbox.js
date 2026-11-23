@@ -452,6 +452,7 @@
     canvas.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('pointercancel', onPointerUp);
     canvas.addEventListener('wheel', onWheel, { passive: false });
+    window.addEventListener('resize', measure, { passive: true });
 
     const rect = canvas.getBoundingClientRect();
     state.viewportW = rect.width || window.innerWidth;
@@ -516,6 +517,7 @@
 
   function onImageLoad() {
     finishLoad(true);
+    measure();
   }
 
   function onImageError() {
@@ -580,15 +582,44 @@
     }
   }
 
-  function clampBounds() {
+  // 版面尺寸缓存：拖拽时每帧都读 getBoundingClientRect / offsetWidth 会强制重排，
+  // 在低端机上是主要的掉帧来源。只在按下、图片加载完、窗口尺寸变化时重新测量。
+  const metrics = { vw: 0, vh: 0, iw: 0, ih: 0 };
+
+  function measure() {
     if (!canvas || !imageEl) return;
 
     const rect = canvas.getBoundingClientRect();
-    const vw = rect.width;
-    const vh = rect.height;
+    metrics.vw = rect.width || window.innerWidth;
+    metrics.vh = rect.height || window.innerHeight;
 
-    const iw = imageEl.naturalWidth || imageEl.offsetWidth || imageEl.getBoundingClientRect().width || 300;
-    const ih = imageEl.naturalHeight || imageEl.offsetHeight || imageEl.getBoundingClientRect().height || 150;
+    const box = imageEl.getBoundingClientRect();
+    metrics.iw = imageEl.naturalWidth || box.width || 300;
+    metrics.ih = imageEl.naturalHeight || box.height || 150;
+  }
+
+  let frame = 0;
+
+  // 把同一帧内的多个 pointermove 合并成一次重绘
+  function scheduleRender() {
+    if (frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = 0;
+      clampBounds();
+      setTransform(false);
+    });
+  }
+
+  function clampBounds() {
+    if (!canvas || !imageEl) return;
+
+    if (!metrics.vw || !metrics.iw) measure();
+
+    const vw = metrics.vw;
+    const vh = metrics.vh;
+
+    const iw = metrics.iw;
+    const ih = metrics.ih;
 
     const sw = iw * state.scale;
     const sh = ih * state.scale;
@@ -654,6 +685,8 @@
     state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     state.downTarget = e.target;
 
+    measure();
+
     if (state.pointers.size === 1) {
       state.dragStartX = e.clientX;
       state.dragStartY = e.clientY;
@@ -686,8 +719,7 @@
       if (state.moved) {
         state.tx = state.dragStartTx + dx;
         state.ty = state.dragStartTy + dy;
-        clampBounds();
-        setTransform(false);
+        scheduleRender();
       }
     } else if (state.pointers.size === 2) {
       state.moved = true;

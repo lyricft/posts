@@ -2,9 +2,6 @@
 @import "@fontsource/inter/400.css";
 @import "@fontsource/inter/600.css";
 @import "@fontsource/inter/700.css";
-@import "@fontsource/noto-sans-sc/400.css";
-@import "@fontsource/noto-sans-sc/600.css";
-@import "@fontsource/noto-sans-sc/700.css";
 @import "@fontsource/fira-code/400.css";
 
 /* 2. 强制层级高于starlight默认样式 */
@@ -12,7 +9,10 @@
 
 /* 3. 覆盖Starlight内置字体变量（核心） */
 :root {
-  --sl-font-sans: "Inter", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+  /* 中文改用系统字体：Noto Sans SC 的 3 个字重会在 CSS 里生成 300+ 条 @font-face，
+     占整份样式表约 67%（550KB / gzip 181KB）。系统字体已足够，且省掉全部中文字体请求。 */
+  --sl-font-sans: "Inter", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
+    system-ui, -apple-system, sans-serif;
   --sl-font-mono: "Fira Code", Consolas, Monaco, monospace;
 }
 
